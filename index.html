@@ -1,325 +1,518 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE" />
-    <!--[if lt IE 10]>
-        <script type="text/javascript" src="base64.js"></script>
-    <![endif]-->
     <title>Dev Tools</title>
-
-    <style>
-        body {
-            font-family: Consolas, Courier, Verdana;
-            width: 768px;
-            margin-left: auto;
-            margin-right: auto;
-            background: #1e1e1e;
-        }
-        label {
-            display: block;
-        }
-        button {
-            width: 100px;
-            background-color: darkgrey;
-            border: solid 1px darkgrey;
-            color: black;
-        }
-        h1, h3, h2, h4, label {
-            color: #979797;
-        }
-        textarea {
-            width: 100%;
-        }
-        input[type='text'], textarea {
-            background: #2f2f2f;
-            border: solid 1px darkblue;
-            color: #d2cece;
-        }
-        .fineprint {
-            font-size: 0.7em;
-            color: #979797;
-            margin-bottom: 0.8em;
-        }
-        .header-with-fineprint {
-            margin-bottom: auto;
-        }
-        .button-bar {
-            margin-bottom: 5px;
-        }
-        .color-container {
-            position: relative;
-            height: 58px;
-            margin-top: 4px;
-        }
-        .color-picker, .selected-color, .color-copy-btn {
-            position: absolute;
-            top: 0;
-            width: 100px;
-            height: 44px;
-        }
-        .selected-color {
-            left: 115px;
-            border-width: 1px;
-            font-size: 150%;
-            padding-left: 5px;
-        }
-        .color-copy-btn {
-            left: 230px;
-            font-size: 150%;
-            height: 48px;
-        }
-        .medium-text {
-            width: 300px;
-        }
-        .length-options {
-            color: #979797;
-        }
-        .length-options .custom-length {
-            width: 50px;
-        }
-        .length-label {
-            display: inline-block;
-            line-height: 30px;
-        }
-        .ascii-art {
-            font-size: 10pt;
-            font-family: Monospace;
-            white-space: pre;
-            color: #ffffff;
-        }
-    </style>
-    <script type="text/javascript">
-        if (!window.btoa) window.btoa = base64.encode;
-        if (!window.atob) window.atob = base64.decode;
-        
-        function clearAll() {
-            var texts = document.getElementsByTagName('textarea');
-            var i = texts.length;
-            while (i--) {
-                texts[i].value = '';
-            };
-            var inLen = document.getElementById('base64InputLength');
-            var outLen = document.getElementById('base64OutputLength');
-            inLen.innerText = "(Length: 0)";
-            outLen.innerText = "(Length: 0)";
-        }
-        function base64encode() {
-            var input = document.getElementById('txtInput').value;
-            var txtOut = document.getElementById('txtOutput');
-            txtOut.value = btoa(input);
-            computeLength();
-        }
-        function base64decode() {
-            var input = document.getElementById('txtInput').value;
-            var txtOut = document.getElementById('txtOutput');
-            try {
-                txtOut.value = atob(input);
-                computeLength();
-            } catch(ex) {
-                var parts = ex.message.split(':');
-                txtOut.value = (parts.length > 1 ? parts[1] : parts[0]);
-            }
-        }
-
-        function encodeUrl() {
-            var obj = document.getElementById('txtUrlInOut');
-            var unencoded = obj.value;
-            obj.value = encodeURIComponent(unencoded).replace(/'/g,"%27").replace(/"/g,"%22");  
-        }
-        function decodeUrl() {
-            var obj = document.getElementById('txtUrlInOut');
-            var encoded = obj.value;
-            obj.value = decodeURIComponent(encoded.replace(/\+/g,  " "));
-        }
-        function encodeImg() {
-            //alert('Coming soon :-)');
-            var img = document.getElementById('base64Image');
-            var reader = new FileReader();
-            var uploadBtn = document.getElementById('uploadImgBtn');
-
-            reader.onloadend = function() {
-                img.src = reader.result;
-                img.style.display = "block";
-
-                var pos = img.src.indexOf(',');
-                var base64Data = document.getElementById('base64ImgData');
-
-                base64Data.value = img.src.substr(pos+1);
-            };
-
-            reader.readAsDataURL(uploadBtn.files[0]);
-        }
-        function makeImg() {
-            var img = document.getElementById('base64Image');
-            var base64Data = document.getElementById('base64ImgData');
-            img.src = "data:image/jpeg;base64," + base64Data.value;
-            img.style.display = "block";
-        }
-
-        function clearImg() {
-            var img = document.getElementById('base64Image');
-            img.src = "";
-            img.style.display = "none";
-        }
-
-        function uploadImg() {
-            var uploadBtn = document.getElementById('uploadImgBtn');
-            uploadBtn.click();
-        }
-
-        function generateGuid() {
-            var txtGuid = document.getElementById('txtGuid');
-            var useHyphens = !!document.getElementById('chkGuidHyphen').checked;
-
-            // RFC 4122 compliant guid generation. Credit: StackOverflow
-            var d = new Date().getTime(); 
-            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = (d + Math.random() * 16) % 16 | 0;
-                d = Math.floor(d / 16);
-                return (c=='x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-
-            txtGuid.value = (useHyphens ? uuid : uuid.replace(/-/g, ""));
-        }
-        function onColorChanged() {
-            var txtSelectedColor = document.getElementById('selectedColor');
-            txtSelectedColor.value = document.getElementById('colorPicker').value;
-        }
-        function onColorTextChanged() {
-            var colorPicker = document.getElementById('colorPicker');
-            colorPicker.value = document.getElementById('selectedColor').value;
-        }
-        function copyText(textInput) {
-            var txtCtrl = document.getElementById(textInput);
-            if (!txtCtrl) return;
-            txtCtrl.select();
-            document.execCommand("copy");
-        }
-        function generateSalt() {
-            var radios = document.getElementsByName('saltLength');
-            var genLength = 64;
-            for (var i = 0, length = radios.length; i < length; i++) {
-                if (radios[i].checked) {
-                    genLength = radios[i].value
-                    break;
-                }
-            }
-            if (genLength == 'Custom') {
-                var l = document.getElementById('txtCustomLength').value;
-                genLength = l ? l : 64;
-            }
-
-            var charSet = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz!$^()_-/{}0123456789'; // length = 72
-            var salt = '', index;
-
-            for(var i=0; i < genLength; i++) {
-                index = Math.floor(Math.random() * 71);
-                salt += charSet.charAt(index);
-            }
-            document.getElementById('txtSalt').value = salt;
-        }
-        function selectCustom() {
-            document.getElementById('customRadioOption').checked = true;
-        }
-        function computeLength() {
-            var inTA = document.getElementById('txtInput');
-            var outTA = document.getElementById('txtOutput');
-            var inLen = document.getElementById('base64InputLength');
-            var outLen = document.getElementById('base64OutputLength');
-
-            inLen.innerText = "(Length: " + inTA.value.length + ")";
-            outLen.innerText = "(Length: " + outTA.value.length + ")";
-        }
-
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' };
     </script>
-</head>
-<body>
-    <pre class="ascii-art">
-________              ___________           .__          
-\______ \   _______  _\__    ___/___   ____ |  |   ______
- |    |  \_/ __ \  \/ / |    | /  _ \ /  _ \|  |  /  ___/
- |    `   \  ___/\   /  |    |(  <_> |  <_> )  |__\___ \ 
-/_______  /\___  >\_/   |____| \____/ \____/|____/____  >
-        \/     \/                                     \/ 
-    </pre>
-    <h3>Base64 Encoding/Decoding (Unicode chars not supported yet)</h3>
-    <label>Input <span id="base64InputLength">(Length: 0)</span></label>
-    <textarea cols="100" rows="5" id="txtInput" onchange="computeLength();"></textarea>
-    <label>Output <span id="base64OutputLength">(Length: 0)</span></label>
-    <textarea cols="100" rows="5" id="txtOutput" onchange="computeLength();"></textarea>
-    <div>
-        <button type="button" onclick="base64encode();">Encode</button>
-        <button type="button" onclick="base64decode();">Decode</button>
-        <button type="button" value="Clear" onclick="clearAll();">Clear</button>
-    </div>
-    <p></p>
-    <hr/>
-    <h3>Url Encoding/Decoding</h3>
-    <form id="urlEncodingDecoding">
-        <label>Input</label>
-        <textarea cols="100" rows="5" id="txtUrlInOut"></textarea>
-        <div>
-            <button type="button" onclick="encodeUrl();">Encode</button>
-            <button type="button" onclick="decodeUrl();">Decode</button>
-            <button type="reset">Clear</button>
-        </div>
-    </form>
-    <p></p>
-    <hr/>
-    <h3 class="header-with-fineprint">Base64 Image Encoding/Decoding</h3>
-    <div class="fineprint">If this doesn't work, either your browser doesn't support data uris or the base64 is bad</div>
-    <form id="imageEncodingDecoding">
-        <label>Image base64 data</label>
-        <textarea cols="100" rows="5" id="base64ImgData" placeholder="Put your image base64 data here"></textarea>
-        <div class="button-bar">
-            <button type="button" onclick="makeImg();">View Image</button>
-            <input style="display: none;" type="file" onchange="encodeImg();" id="uploadImgBtn"></input>
-            <button type="button" onclick="uploadImg();">Encode Image</button>
-            <button type="reset" onclick="clearImg();">Clear</button>
-        </div>
-        <img id='base64Image' style="display:none;" />
-    </form>
-    <hr/>
-    
-    <h3 class="header-with-fineprint">Color Picker</h3>
-    <form id="colorPickerForm">
-        <div class="color-container">
-            <input type="color" id="colorPicker" class="color-picker" onchange="onColorChanged();"></input>
-            <input type="text" id="selectedColor" class="selected-color" onchange="onColorTextChanged();"></input>
-            <button type="button" class="color-copy-btn" onclick="copyText('selectedColor');">Copy</button>
-        </div>
-        
-    </form>
+    <style>
+      .ascii-art {
+        font-family: 'Courier New', Courier, monospace;
+        white-space: pre;
+        font-size: 10pt;
+        line-height: 1.3;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useRef, useEffect, useCallback } = React;
 
-    <hr/>
-    <h3>Guid Generator (RFC 4122 compliant)</h3>
-    <form id="guidGenForm">
-        <input type="text" class="medium-text" id="txtGuid"></input>
-        <input type="checkbox" id="chkGuidHyphen"><span class="length-options">Hyphens?</span></input>
-        <button type="button" onclick="generateGuid();">Generate</button>
-        <button type="button" onclick="copyText('txtGuid')">Copy</button>
-        <button type="reset">Clear</button>
-    </form>
-    
-    <hr/>
-    <h3>Key/Salt Generator</h3>
-    <form id="saltForm">
-        <textarea cols="100" rows="5" id="txtSalt" class=""></textarea>
-        <div class="length-options">
-            <label class="length-label">Length</label>
-            <input type="radio" name="saltLength" value="64" checked="true">64</input>
-            <input type="radio" name="saltLength" value="128">128</input>
-            <input type="radio" name="saltLength" value="256">256</input>
-            <input type="radio" name="saltLength" value="Custom" id="customRadioOption">Custom</input>
-            <input type="text" id="txtCustomLength" class="custom-length" onfocus="selectCustom();"></input>
-            <button type="button" onclick="generateSalt();" >Generate</button>
-            <button type="button" onclick="copyText('txtSalt')">Copy</button>
-            <button type="reset">Clear</button>
+      /* ─── Constants ──────────────────────────────────────────── */
+
+      const SALT_CHARS = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz!$^()_-/{}0123456789';
+
+      const ASCII_ART =
+        '________              ___________           .__          \n' +
+        '\\______ \\   _______  _\\__    ___/___   ____ |  |   ______\n' +
+        ' |    |  \\_/ __ \\  \\/ / |    | /  _ \\ /  _ \\|  |  /  ___/\n' +
+        ' |    `   \\  ___/\\   /  |    |(  <_> |  <_> )  |__\\___ \\ \n' +
+        '/_______  /\\___  >\\_/   |____| \\____/ \\____/|____/____  >\n' +
+        '        \\/     \\/                                     \\/ ';
+
+      /* ─── Utilities ──────────────────────────────────────────── */
+
+      const copyToClipboard = async (text) => {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const el = document.createElement('textarea');
+          el.value = text;
+          el.style.cssText = 'position:fixed;opacity:0';
+          document.body.appendChild(el);
+          el.select();
+          document.execCommand('copy');
+          document.body.removeChild(el);
+        }
+      };
+
+      const useCopy = (getValue) => {
+        const [copied, setCopied] = useState(false);
+        const trigger = useCallback(async () => {
+          const text = typeof getValue === 'function' ? getValue() : getValue;
+          if (!text) return;
+          await copyToClipboard(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1600);
+        }, [getValue]);
+        return [copied, trigger];
+      };
+
+      /* ─── Shared UI Components ───────────────────────────────── */
+
+      const IconCopy = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+          <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+        </svg>
+      );
+
+      const IconCheck = () => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3.5 h-3.5 text-green-500"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clipRule="evenodd"
+          />
+        </svg>
+      );
+
+      const InlineCopyBtn = ({ getValue, disabled }) => {
+        const [copied, trigger] = useCopy(getValue);
+        return (
+          <button
+            type="button"
+            onClick={trigger}
+            disabled={disabled}
+            title="Copy to clipboard"
+            className="ml-auto flex items-center gap-1 text-xs px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed select-none"
+          >
+            {copied ? <IconCheck /> : <IconCopy />}
+            <span>{copied ? 'Copied!' : 'Copy'}</span>
+          </button>
+        );
+      };
+
+      const LengthBadge = ({ length }) => (
+        <span className="inline-flex items-center text-xs font-mono tabular-nums bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full ml-2 select-none">
+          {length.toLocaleString()}
+        </span>
+      );
+
+      const FieldLabel = ({ htmlFor, children, length, getValue }) => (
+        <div className="flex items-center mb-1.5">
+          <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-400">
+            {children}
+            {length !== undefined && <LengthBadge length={length} />}
+          </label>
+          {getValue !== undefined && <InlineCopyBtn getValue={getValue} disabled={!length} />}
         </div>
-    </form>
-    
-    
-</body>
+      );
+
+      const INPUT_CLS =
+        'font-mono text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors';
+      const TEXTAREA_CLS =
+        'w-full font-mono text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-600';
+
+      const TextAreaField = ({ id, label, value, onChange, rows = 5, placeholder, readOnly = false }) => (
+        <div className="mb-4">
+          <FieldLabel htmlFor={id} length={value.length} getValue={() => value}>
+            {label}
+          </FieldLabel>
+          <textarea
+            id={id}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={rows}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            className={TEXTAREA_CLS}
+          />
+        </div>
+      );
+
+      const Btn = ({ onClick, children, variant = 'secondary', type = 'button', disabled = false }) => {
+        const v = {
+          primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus:ring-blue-500',
+          secondary:
+            'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-400',
+          danger:
+            'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 focus:ring-red-400',
+          success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+        };
+        return (
+          <button
+            type={type}
+            onClick={onClick}
+            disabled={disabled}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all focus:outline-none focus:ring-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+              v[variant] || v.secondary
+            }`}
+          >
+            {children}
+          </button>
+        );
+      };
+
+      const Section = ({ title, fineprint, children }) => (
+        <section className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 font-mono">{title}</h3>
+            {fineprint && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{fineprint}</p>}
+          </div>
+          {children}
+        </section>
+      );
+
+      /* ─── Base64 Section ─────────────────────────────────────── */
+
+      const Base64Section = () => {
+        const [text, setText] = useState('');
+        const [error, setError] = useState('');
+
+        const encode = () => {
+          setError('');
+          try {
+            setText(
+              btoa(
+                encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)))
+              )
+            );
+          } catch (ex) {
+            setError(ex.message);
+          }
+        };
+
+        const decode = () => {
+          setError('');
+          try {
+            setText(
+              decodeURIComponent(
+                atob(text)
+                  .split('')
+                  .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                  .join('')
+              )
+            );
+          } catch (ex) {
+            const parts = ex.message.split(':');
+            setError(parts.length > 1 ? parts[1].trim() : parts[0]);
+          }
+        };
+
+        return (
+          <Section title="Base64 Encoding / Decoding">
+            <TextAreaField
+              id="b64Text"
+              label="Text"
+              value={text}
+              onChange={(v) => {
+                setText(v);
+                setError('');
+              }}
+            />
+            {error && <p className="text-xs text-red-500 dark:text-red-400 mb-3 -mt-2">{error}</p>}
+            <div className="flex gap-2">
+              <Btn onClick={encode} variant="primary">
+                Encode
+              </Btn>
+              <Btn onClick={decode}>Decode</Btn>
+              <Btn
+                onClick={() => {
+                  setText('');
+                  setError('');
+                }}
+                variant="danger"
+              >
+                Clear
+              </Btn>
+            </div>
+          </Section>
+        );
+      };
+
+      /* ─── URL Encoding Section ───────────────────────────────── */
+
+      const UrlSection = () => {
+        const [value, setValue] = useState('');
+        const encode = () => setValue(encodeURIComponent(value).replace(/'/g, '%27').replace(/"/g, '%22'));
+        const decode = () => {
+          try {
+            setValue(decodeURIComponent(value.replace(/\+/g, ' ')));
+          } catch (_) {}
+        };
+
+        return (
+          <Section title="URL Encoding / Decoding">
+            <TextAreaField id="urlInOut" label="Input / Output" value={value} onChange={setValue} />
+            <div className="flex gap-2">
+              <Btn onClick={encode} variant="primary">
+                Encode
+              </Btn>
+              <Btn onClick={decode}>Decode</Btn>
+              <Btn onClick={() => setValue('')} variant="danger">
+                Clear
+              </Btn>
+            </div>
+          </Section>
+        );
+      };
+
+      /* ─── Base64 Image Section ───────────────────────────────── */
+
+      const ImageSection = () => {
+        const [imgData, setImgData] = useState('');
+        const [imgSrc, setImgSrc] = useState('');
+        const fileRef = useRef(null);
+
+        const view = () => {
+          if (imgData.trim()) setImgSrc(`data:image/jpeg;base64,${imgData.trim()}`);
+        };
+        const clear = () => {
+          setImgSrc('');
+          setImgData('');
+          if (fileRef.current) fileRef.current.value = '';
+        };
+        const encode = (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const pos = reader.result.indexOf(',');
+            setImgData(reader.result.substring(pos + 1));
+            setImgSrc(reader.result);
+          };
+          reader.readAsDataURL(file);
+        };
+
+        return (
+          <Section
+            title="Base64 Image Encoding / Decoding"
+            fineprint="If the image doesn't render, the base64 data may be malformed."
+          >
+            <TextAreaField
+              id="imgData"
+              label="Image base64 data"
+              value={imgData}
+              onChange={setImgData}
+              placeholder="Paste image base64 data here…"
+            />
+            <div className="flex gap-2 mb-4">
+              <Btn onClick={view} variant="primary">
+                View Image
+              </Btn>
+              <Btn onClick={() => fileRef.current?.click()}>Encode Image</Btn>
+              <Btn onClick={clear} variant="danger">
+                Clear
+              </Btn>
+              <input ref={fileRef} type="file" accept="image/*" onChange={encode} className="hidden" />
+            </div>
+            {imgSrc && (
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden inline-block max-w-full">
+                <img src={imgSrc} alt="Base64 preview" className="max-w-full max-h-72 object-contain block" />
+              </div>
+            )}
+          </Section>
+        );
+      };
+
+      /* ─── Color Picker Section ───────────────────────────────── */
+
+      const ColorSection = () => {
+        const [color, setColor] = useState('#3b82f6');
+        const [copiedColor, triggerCopyColor] = useCopy(() => color);
+
+        return (
+          <Section title="Color Picker">
+            <div className="flex items-center gap-4">
+              <div className="relative w-12 h-10 rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 shadow-inner cursor-pointer">
+                <div className="absolute inset-0" style={{ backgroundColor: color }} />
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className={`w-32 ${INPUT_CLS}`}
+              />
+              <LengthBadge length={color.length} />
+              <Btn onClick={triggerCopyColor} variant={copiedColor ? 'success' : 'secondary'}>
+                {copiedColor ? 'Copied!' : 'Copy'}
+              </Btn>
+            </div>
+          </Section>
+        );
+      };
+
+      /* ─── GUID Generator ─────────────────────────────────────── */
+
+      const GuidSection = () => {
+        const [guid, setGuid] = useState('');
+        const [hyphens, setHyphens] = useState(true);
+        const [copiedGuid, triggerCopyGuid] = useCopy(() => guid);
+
+        const generate = () => {
+          const uuid = crypto.randomUUID
+            ? crypto.randomUUID()
+            : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = (Date.now() + Math.random() * 16) % 16 | 0;
+                return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+              });
+          const result = hyphens ? uuid : uuid.replace(/-/g, '');
+          setGuid(result.toUpperCase());
+        };
+
+        return (
+          <Section title="GUID Generator (RFC 4122)">
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="text"
+                value={guid}
+                readOnly
+                placeholder="Click Generate…"
+                className={`flex-1 ${INPUT_CLS}`}
+              />
+              {guid && <LengthBadge length={guid.length} />}
+              {guid && <InlineCopyBtn getValue={() => guid} />}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hyphens}
+                  onChange={(e) => setHyphens(e.target.checked)}
+                  className="rounded accent-blue-500"
+                />
+                Hyphens
+              </label>
+              <Btn onClick={generate} variant="primary">
+                Generate
+              </Btn>
+              <Btn onClick={() => setGuid('')} variant="danger">
+                Clear
+              </Btn>
+            </div>
+          </Section>
+        );
+      };
+
+      /* ─── Key / Salt Generator ───────────────────────────────── */
+
+      const SaltSection = () => {
+        const [salt, setSalt] = useState('');
+        const [length, setLength] = useState('64');
+        const [custom, setCustom] = useState('');
+
+        const generate = () => {
+          const raw = parseInt(length === 'Custom' ? custom || '64' : length, 10);
+          const len = isNaN(raw) || raw <= 0 ? 64 : Math.min(raw, 4096);
+          const setLen = SALT_CHARS.length; // 72
+          const maxOk = 256 - (256 % setLen); // 216 — unbiased rejection threshold
+          let result = '';
+          while (result.length < len) {
+            const buf = new Uint8Array(Math.max(len * 2, 128));
+            crypto.getRandomValues(buf);
+            for (let i = 0; i < buf.length && result.length < len; i++) {
+              if (buf[i] < maxOk) result += SALT_CHARS[buf[i] % setLen];
+            }
+          }
+          setSalt(result);
+        };
+
+        return (
+          <Section title="Key / Salt Generator">
+            <TextAreaField id="saltOut" label="Generated Key" value={salt} onChange={setSalt} rows={4} />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Length</span>
+              {['64', '128', '256', 'Custom'].map((l) => (
+                <label
+                  key={l}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+                >
+                  <input
+                    type="radio"
+                    name="saltLen"
+                    value={l}
+                    checked={length === l}
+                    onChange={() => setLength(l)}
+                    className="accent-blue-500"
+                  />
+                  {l}
+                </label>
+              ))}
+              {length === 'Custom' && (
+                <input
+                  type="text"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  placeholder="64"
+                  className={`w-16 ${INPUT_CLS} py-1`}
+                />
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Btn onClick={generate} variant="primary">
+                Generate
+              </Btn>
+              <Btn onClick={() => setSalt('')} variant="danger">
+                Clear
+              </Btn>
+            </div>
+          </Section>
+        );
+      };
+
+      /* ─── App ────────────────────────────────────────────────── */
+
+      const App = () => {
+        const [isDark, setIsDark] = useState(
+          () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+        );
+
+        useEffect(() => {
+          document.documentElement.classList.toggle('dark', isDark);
+        }, [isDark]);
+
+        return (
+          <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+            <button
+              onClick={() => setIsDark((d) => !d)}
+              className="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            <div className="max-w-5xl mx-auto px-6 py-10">
+              <pre className="ascii-art text-gray-700 dark:text-green-400 mb-8 overflow-x-auto">{ASCII_ART}</pre>
+              <Base64Section />
+              <UrlSection />
+              <ImageSection />
+              <ColorSection />
+              <GuidSection />
+              <SaltSection />
+            </div>
+          </div>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
 </html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Token & Cost Estimator</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --panel: #ffffff;
+    --border: #e3ddd3;
+    --text: #2d2a26;
+    --muted: #6b6459;
+    --accent: #c2694a;
+    --accent-dark: #a4523a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 20px 60px;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 24px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 260px;
+    padding: 14px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+    color: var(--text);
+    background: #fffdfa;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .stat {
+    background: #fbf3ee;
+    border: 1px solid #f0ddd2;
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .stat .num {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+  }
+  .stat .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  td input {
+    width: 70px;
+    padding: 5px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  td.cost { font-weight: 700; color: var(--accent-dark); white-space: nowrap; }
+  .model-name { font-weight: 600; }
+
+  .io-toggle {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .io-toggle > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+  .io-toggle input[type=number] {
+    width: 90px;
+    padding: 5px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+
+  .note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .footer-note {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 24px;
+  }
+  a { color: var(--accent-dark); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Claude Token &amp; Cost Estimator</h1>
+  <p class="subtitle">Fully client-side — no server, no data leaves your browser. Estimates token count via a character/word heuristic (not the exact Claude tokenizer).</p>
+
+  <div class="panel">
+    <label for="inputText">Input text <span style="font-weight:400; text-transform:none;">(the prompt you send to Claude)</span></label>
+    <textarea id="inputText" placeholder="Paste or type your prompt / input text here…"></textarea>
+    <div class="stats-row">
+      <div class="stat"><div class="num" id="inCharCount">0</div><div class="label">Characters</div></div>
+      <div class="stat"><div class="num" id="inWordCount">0</div><div class="label">Words</div></div>
+      <div class="stat"><div class="num" id="inTokenCount">0</div><div class="label">Estimated input tokens</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label for="outputText">Output text <span style="font-weight:400; text-transform:none;">(Claude's expected response — paste real text, or just type a number below)</span></label>
+    <textarea id="outputText" placeholder="Paste or type expected output text here (optional)…" style="min-height:140px;"></textarea>
+    <div class="stats-row">
+      <div class="stat"><div class="num" id="outCharCount">0</div><div class="label">Characters</div></div>
+      <div class="stat"><div class="num" id="outWordCount">0</div><div class="label">Words</div></div>
+      <div class="stat"><div class="num" id="outTokenCountFromText">0</div><div class="label">Estimated output tokens</div></div>
+    </div>
+    <div class="io-toggle" style="margin-top:14px;">
+      <div>
+        Or override output tokens manually: <input type="number" id="outputTokensOverride" placeholder="leave blank to use text above" min="0" step="100">
+      </div>
+      <div>
+        Requests: <input type="number" id="requestCount" value="1" min="1" step="1">
+      </div>
+    </div>
+    <p class="note">Estimate uses ~4 characters/token blended with a words×1.3 check, then averages the two — a common approximation for English text with Claude/GPT-style tokenizers. Actual counts from Anthropic's real tokenizer may differ, especially for code, non-English text, or heavy punctuation.</p>
+  </div>
+
+  <div class="panel">
+    <label>Model pricing (USD per 1M tokens — editable, defaults as of Sep 2026)</label>
+    <table>
+      <thead>
+        <tr><th>Model</th><th>Input $/1M</th><th>Output $/1M</th><th>Input cost</th><th>Output cost</th><th>Total cost</th></tr>
+      </thead>
+      <tbody id="pricingBody"></tbody>
+    </table>
+    <p class="note">Default rates: Haiku 4.5 ($1 / $5), Sonnet 5 ($2 / $10) — check current Sonnet pricing, older Sonnet 4.6 was $3/$15 — Opus 5.5 ($4 / $20), Fable 5.1 ($10 / $50). Edit any field to match today's <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">official pricing page</a>, since rates can change.</p>
+  </div>
+
+  <p class="footer-note">Everything above runs locally in your browser via JavaScript. No text is sent anywhere.</p>
+</div>
+
+<script>
+(function() {
+  const inputText = document.getElementById('inputText');
+  const outputText = document.getElementById('outputText');
+  const inCharCount = document.getElementById('inCharCount');
+  const inWordCount = document.getElementById('inWordCount');
+  const inTokenCount = document.getElementById('inTokenCount');
+  const outCharCount = document.getElementById('outCharCount');
+  const outWordCount = document.getElementById('outWordCount');
+  const outTokenCountFromText = document.getElementById('outTokenCountFromText');
+  const outputTokensOverride = document.getElementById('outputTokensOverride');
+  const requestCountEl = document.getElementById('requestCount');
+  const pricingBody = document.getElementById('pricingBody');
+
+  const models = [
+    { name: 'Haiku 4.5', input: 1, output: 5 },
+    { name: 'Sonnet 5', input: 2, output: 10 },
+    { name: 'Opus 5.5', input: 4, output: 20 },
+    { name: 'Fable 5.1', input: 10, output: 50 },
+  ];
+
+  function estimateTokens(text) {
+    if (!text) return 0;
+    const chars = text.length;
+    const words = text.trim().length ? text.trim().split(/\s+/).length : 0;
+    const byChars = chars / 4;
+    const byWords = words * 1.3;
+    return Math.round((byChars + byWords) / 2);
+  }
+
+  function buildRows() {
+    pricingBody.innerHTML = '';
+    models.forEach((m, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="model-name">${m.name}</td>
+        <td><input type="number" step="0.01" min="0" data-idx="${idx}" data-field="input" value="${m.input}"></td>
+        <td><input type="number" step="0.01" min="0" data-idx="${idx}" data-field="output" value="${m.output}"></td>
+        <td class="cost" id="incost-${idx}">$0.00</td>
+        <td class="cost" id="outcost-${idx}">$0.00</td>
+        <td class="cost" id="cost-${idx}">$0.00</td>
+      `;
+      pricingBody.appendChild(tr);
+    });
+    pricingBody.querySelectorAll('input').forEach(el => {
+      el.addEventListener('input', () => {
+        const idx = +el.dataset.idx;
+        const field = el.dataset.field;
+        models[idx][field] = parseFloat(el.value) || 0;
+        recalc();
+      });
+    });
+  }
+
+  function fmt(n) {
+    return '$' + n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 4 : 2, maximumFractionDigits: n < 1 ? 6 : 2 });
+  }
+
+  function recalc() {
+    const inText = inputText.value;
+    const inChars = inText.length;
+    const inWords = inText.trim().length ? inText.trim().split(/\s+/).length : 0;
+    const inTokens = estimateTokens(inText);
+
+    inCharCount.textContent = inChars.toLocaleString();
+    inWordCount.textContent = inWords.toLocaleString();
+    inTokenCount.textContent = inTokens.toLocaleString();
+
+    const outText = outputText.value;
+    const outChars = outText.length;
+    const outWords = outText.trim().length ? outText.trim().split(/\s+/).length : 0;
+    const outTokensFromText = estimateTokens(outText);
+
+    outCharCount.textContent = outChars.toLocaleString();
+    outWordCount.textContent = outWords.toLocaleString();
+    outTokenCountFromText.textContent = outTokensFromText.toLocaleString();
+
+    const overrideVal = outputTokensOverride.value;
+    const outTokens = overrideVal !== '' ? (parseFloat(overrideVal) || 0) : outTokensFromText;
+    const requests = parseInt(requestCountEl.value) || 1;
+
+    models.forEach((m, idx) => {
+      const inputCost = (inTokens / 1e6) * m.input * requests;
+      const outputCost = (outTokens / 1e6) * m.output * requests;
+      const total = inputCost + outputCost;
+      const inEl = document.getElementById(`incost-${idx}`);
+      const outEl = document.getElementById(`outcost-${idx}`);
+      const totalEl = document.getElementById(`cost-${idx}`);
+      if (inEl) inEl.textContent = fmt(inputCost);
+      if (outEl) outEl.textContent = fmt(outputCost);
+      if (totalEl) totalEl.textContent = fmt(total);
+    });
+  }
+
+  inputText.addEventListener('input', recalc);
+  outputText.addEventListener('input', recalc);
+  outputTokensOverride.addEventListener('input', recalc);
+  requestCountEl.addEventListener('input', recalc);
+
+  buildRows();
+  recalc();
+})();
+</script>
+</body>
+</html>
